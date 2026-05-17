@@ -65,35 +65,37 @@ cp templates/HEARTBEAT-TEMPLATE.md "$SUPERVISOR_WORKSPACE/HEARTBEAT.md"
 # 编辑文件顶部的变量声明，替换为实际路径
 ```
 
-## Cron 配置
+## 心跳配置
 
-Supervisor 需要每小时 cron 触发心跳：
+Supervisor 的心跳由 OpenClaw 内置心跳机制触发（配置级别），**不需要手动创建 cron**。
 
-```bash
-# 创建 supervisor 心跳 cron
-openclaw cron create --name "supervisor-heartbeat" \
-  --schedule '{"kind":"every","everyMs":3600000}' \
-  --payload '{"kind":"systemEvent","agentId":"supervisor","text":"[heartbeat] 巡检"}' \
-  --sessionTarget 'last'
+需要确保两件事：
+
+### 1. Supervisor 的 HEARTBEAT.md 存在
+
+按上方 Supervisor HEARTBEAT.md 模板步骤操作即可。
+
+### 2. OpenClaw 配置文件启用心跳
+
+在 supervisor agent 的配置中确保存在 `heartbeat` 配置项，例如：
+
+```json
+{
+  "agents": {
+    "supervisor": {
+      "heartbeat": {
+        "enabled": true,
+        "intervalMs": 3600000
+      }
+    }
+  }
+}
 ```
 
-**关键参数：**
-- `agentId: supervisor` — 确保注入 supervisor agent
-- `sessionTarget: last` — 复用 supervisor 最近的 session
-- `everyMs: 3600000` — 每小时
-- payload 必须含 `[heartbeat]` 关键词，触发 HEARTBEAT.md 流程
-
-### Cron 验证
-
+验证：
 ```bash
-# 确认 cron 存在且 enabled
-openclaw cron list
-
-# 手动触发一次验证
-openclaw cron run <cronId>
-
-# 查看运行日志
-openclaw cron list-runs --cron-id <cronId> --limit 5
+# 检查 supervisor 配置中有 heartbeat 设置
+openclaw config get agents.supervisor.heartbeat
 ```
 
 ## 安装验证清单
@@ -119,8 +121,8 @@ bash "$SCRIPT_PATH" create "子任务验证" --agent test --parent "$P"
 bash "$SCRIPT_PATH" tree
 bash "$SCRIPT_PATH" fail "$P" "cleanup"
 
-# 5. Supervisor 心跳 cron
-openclaw cron list | grep supervisor
+# 5. Supervisor 心跳配置（HEARTBEAT.md + config heartbeat）
+[ -f "$SUPERVISOR_WORKSPACE/HEARTBEAT.md" ] && echo "HEARTBEAT.md ✅" || echo "HEARTBEAT.md ❌"
 
 # 6. Supervisor AGENTS.md 协议前缀
 grep "task-manager" "$SUPERVISOR_WORKSPACE/AGENTS.md"
@@ -149,5 +151,4 @@ git push
 
 1. **删除旧 skill 目录**：`rm -rf skills/task-management/`
 2. **更新引用**：所有 `task-management` → `task-manager`（grep 检查 AGENTS.md、HEARTBEAT.md）
-3. **旧 cron 处理**：删除旧 cron，按上方 Cron 配置新建
-4. **验证**：执行上方安装验证清单
+3. **验证**：执行上方安装验证清单

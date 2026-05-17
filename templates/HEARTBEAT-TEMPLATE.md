@@ -8,7 +8,7 @@ SCRIPT_PATH=/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/t
 SKILL_PATH=/vol1/1000/config/share/openclaw/state/skills/task-manager/SKILL.md
 -->
 
-**触发方式**：每小时 cron 触发（systemEvent），注入到 supervisor main session。
+**触发方式**：OpenClaw 内置心跳机制触发（配置 heartbeat），注入到 supervisor main session。
 
 ## 心跳流程
 

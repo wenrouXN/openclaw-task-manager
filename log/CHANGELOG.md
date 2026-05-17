@@ -64,7 +64,7 @@
 ### 变更
 - Supervisor AGENTS.md 模板：新增 verify/reopen/revise/tree/parent/orphans
 - Supervisor HEARTBEAT.md 模板：新增 tree 命令 + 父子 blocked 告警
-- 安装章节：拆分为 references/setup.md，含 cron 配置 + 安装验证清单 + 迁移指引
+- 安装章节：拆分为 references/setup.md，含心跳配置 + 安装验证清单 + 迁移指引
 - SPEC.md 格式：拆分为 references/spec-format.md，含状态流转图 + 父子差异 + 恢复机制
 
 ## v2.0.0 — 2026-05-17
