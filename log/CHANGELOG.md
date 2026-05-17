@@ -1,5 +1,17 @@
 # CHANGELOG — Task Manager
 
+## v2.1.1 — 2026-05-17
+
+### 修复
+- **complete/fail 自动清理锁文件**：任务完成或失败时 `rm -f "$LOCK_DIR/$task_id.lock"`，防止 `.locks/` 目录膨胀
+- **list-done table header**：`list-done --format table` 现在输出表头行（TASK/OWNER/UPDATED/DESC）
+
+### 变更
+- **精简 supervisor AGENTS.md**：去除与 SKILL.md 重复的命令列表，保留 supervisor 专有的消息解析规则和告警逻辑
+- **devengineer AGENTS.md**：task-manager 引用改为 skill 名（全局自动加载），删除硬编码路径
+- **devengineer HEARTBEAT.md**：task-manager 引用精简为"全局，自动加载"，删除冗余路径和命令示例
+- **清理测试任务**：移除 T-20260517-003~008 测试数据
+
 ## v2.1.0 — 2026-05-17
 
 ### 新增

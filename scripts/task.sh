@@ -311,6 +311,7 @@ cmd_complete() {
     sed -i "s/\*\*updated\*\*: .*/\*\*updated\*\*: $now/" "$spec"
     echo "- $now — 任务完成" >> "$ACTIVE_DIR/$task_id/log.md"
     mv "$ACTIVE_DIR/$task_id" "$DONE_DIR/$task_id"
+    rm -f "$LOCK_DIR/$task_id.lock"
     echo "{\"taskId\":\"$task_id\",\"status\":\"done\"}"
 }
 
@@ -325,6 +326,7 @@ cmd_fail() {
     sed -i "s/\*\*updated\*\*: .*/\*\*updated\*\*: $now/" "$spec"
     echo "- $now — 任务失败: $reason" >> "$ACTIVE_DIR/$task_id/log.md"
     mv "$ACTIVE_DIR/$task_id" "$FAILED_DIR/$task_id"
+    rm -f "$LOCK_DIR/$task_id.lock"
 
     # Auto-block parent if this is a child task
     local parent_id
@@ -643,6 +645,10 @@ cmd_list_done() {
     done
 
     local count=0
+    if [ "$format" = "table" ]; then
+        printf "%-16s %-12s %-20s %s\n" "TASK" "OWNER" "UPDATED" "DESC"
+        printf "%-16s %-12s %-20s %s\n" "----" "-----" "-------" "----"
+    fi
     for dir in "$DONE_DIR"/T-*; do
         [ -d "$dir" ] || continue
         [ "$count" -ge "$limit" ] && break

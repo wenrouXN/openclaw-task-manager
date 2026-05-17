@@ -20,7 +20,7 @@
 
 ## 任务管理协议
 
-当收到 `[task-manager]` 前缀的消息时，执行任务管理操作。
+当收到包含 `[task-manager]` 前缀的消息时，执行任务管理操作。
 
 ### 消息格式
 ```
@@ -32,12 +32,15 @@
 ```bash
 SCRIPT=/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh
 
-# 创建（--parent 创建子任务）
+# 创建任务（--parent 创建子任务）
 bash $SCRIPT create "<desc>" --agent <agentId> --priority <priority> --session <sessionKey>
 bash $SCRIPT create "<子任务>" --agent <agentId> --parent <parentId>
 
-# 更新 / 规划
+# 更新进展 / 状态
 bash $SCRIPT update <taskId> --step "<desc>" --last-step "<prev>" --next-action "<next>"
+bash $SCRIPT update <taskId> --status <running|blocked|done|failed>
+
+# 规划步骤
 bash $SCRIPT plan <taskId> --steps "step1,step2,step3"
 
 # 验证（complete 前必须 verify pass）
@@ -54,7 +57,7 @@ bash $SCRIPT reopen <taskId>
 # 修订（验证失败后追加修复步骤）
 bash $SCRIPT revise <taskId> --findings "fix1,fix2"
 
-# 失败 / 阻塞 / 解除
+# 失败 / 阻塞 / 解除阻塞
 bash $SCRIPT fail <taskId> "<reason>"
 bash $SCRIPT block <taskId> "<reason>"
 bash $SCRIPT unblock <taskId>
@@ -79,11 +82,12 @@ bash $SCRIPT rebuild-index
 ### 解析规则
 
 1. 去掉 `[task-manager]` 前缀
-2. 第一段为命令
+2. 第一段为命令（create/update/plan/verify/complete/reopen/revise/fail/block/unblock/list/status/tree/resume/claim/takeover/cleanup/orphans）
 3. `:` 后为值，`|` 分隔的后续段为参数
 4. 参数格式 `key: value`（冒号后有空格）
 
 ### 返回格式
+操作完成后返回简洁结果：
 - ✅ 任务已创建: T-20260516-001
 - ✅ T-20260516-001 已更新: step xxx
 - ✅ T-20260516-001 已验证 → 可以 complete
