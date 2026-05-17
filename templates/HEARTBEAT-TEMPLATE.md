@@ -27,33 +27,71 @@ bash $SCRIPT tree
 bash $SCRIPT cleanup --stale-days 3
 ```
 
-### Step 2 — 裸跑检测（多步任务未落盘）
+### Step 2 — 任务推进与裸跑检测
 
-检查各 agent 的活跃 session，识别疑似多步任务未跟踪的情况：
+**职责**：主动推进停滞任务，识别裸跑 session，提醒需要决策的任务。
+
+#### 2.1 数据收集
 
 ```bash
-# 1. 获取最近 2 小时活跃的 sessions
-sessions_list(activeMinutes=120, includeLastMessage=true)
+# 活跃任务（JSON）
+TASKS=$(bash $SCRIPT list --format json 2>/dev/null)
 
-# 2. 获取当前活跃任务
-bash $SCRIPT list --format json
+# 活跃 sessions（含最近消息）
+sessions_list(activeMinutes=120, includeLastMessage=true)
+```
+
+#### 2.2 停滞任务推进
+
+遍历活跃任务，对比任务 owner 与活跃 session：
+
+| 状态 | 判断条件 | 处理 |
+|------|----------|------|
+| **blocked + needsDecision** | `needsDecision=true` + `blockedReason` | `message(action=send)` 提醒用户决策，附 taskId + blockedReason |
+| **blocked + 子任务 fail** | blockedReason 含子任务 ID | `message(action=send)` 提醒用户，附子任务失败原因 |
+| **running + owner session 活跃** | 任务 `updatedAt` > 30min + session 最近消息是 assistant 且含问句 | `sessions_send` 轻推 agent："任务 T-xxx 停滞 30min+，上次你问了问题但没继续，请推进或告知是否需要用户决策" |
+| **running + owner session 活跃 + 用户已回复** | session 最近消息是 user | `sessions_send` 轻推 agent："用户已回复，请继续推进任务 T-xxx" |
+| **running + owner session 不活跃** | session 无活跃记录 | 不处理，等 agent 下次 session 自动 `resume` |
+| **running + 刚创建 <15min** | `createdAt` 近期 | 不处理，给 agent 执行时间 |
+
+**关键原则**：
+- `sessions_send` 是**非阻塞**的（不等回复），不会中断 agent 当前工作
+- 推送消息带 `[task-manager]` 前缀，agent 按 HEARTBEAT.md 协议响应
+- 用户决策提醒走 `message(action=send)` 直接推送到聊天渠道
+
+#### 2.3 裸跑检测
+
+```bash
+# 对比：有活跃 session 的 agent vs 有活跃任务的 agent
+# 差集 = 可能裸跑的 agent
 ```
 
 判断逻辑：
-- 某 agent 有活跃 session 但**无活跃任务** → 可能裸跑
-- session 最近消息包含多步特征词（"第一步"、"然后"、"接下来"、"修改"、"部署"、"测试"） → 高概率裸跑
-- 通知 agent：`sessions_send(sessionKey, "[task-manager] 检测到疑似多步任务未落盘，请创建任务跟踪")`
+- agent 有活跃 session 但**无活跃任务** → 检查 session 最近消息
+- 最近消息含多步特征（"第一步"、"然后"、"接下来"、"修改"、"部署"、"测试"、"先...再..."）→ 高概率裸跑
+- `sessions_send` 提醒："检测到疑似多步任务未落盘，请创建任务跟踪（不要中断当前工作，创建即可）"
+- 最近消息是简单问答（<2 步）→ 不提醒
 
-### Step 3 — 异常处理
+#### 2.4 汇总决策
 
-| 异常类型 | 处理方式 |
-|----------|----------|
-| 裸跑多步任务 | `sessions_send` 提醒对应 agent 创建任务 |
-| 僵尸任务 | `message(action=send)` 推送到群，附 taskId + 描述 + 最后更新时间 |
-| blocked 任务 | 通知用户决策，附 blockedReason |
-| 父任务 blocked（子任务 fail） | 推送到群，附子任务 ID + 失败原因 |
-| 任务数 > 10 | 告警，建议归档 |
-| 无异常 | HEARTBEAT_OK（不发消息） |
+所有异常收集完毕后，按优先级处理：
+1. 需要用户决策的 blocked 任务 → 推送用户
+2. 停滞的 running 任务 → 推送 agent
+3. 裸跑 session → 提醒 agent（不中断）
+4. 无异常 → HEARTBEAT_OK
+
+### Step 3 — 异常处理汇总
+
+| 异常类型 | 处理方式 | 推送渠道 |
+|----------|----------|----------|
+| blocked + needsDecision | 提醒用户决策，附 taskId + blockedReason | `message(action=send)` |
+| blocked + 子任务 fail | 提醒用户，附子任务失败原因 | `message(action=send)` |
+| running + 停滞 >30min + 用户已回复 | 推送 agent 继续 | `sessions_send` |
+| running + 停滞 >30min + agent 问了问题 | 推送 agent 继续或说明需要决策 | `sessions_send` |
+| 裸跑多步任务 | 提醒 agent 创建任务（不中断） | `sessions_send` |
+| 僵尸任务（>3天） | 推送到群，附 taskId + 描述 + 最后更新时间 | `message(action=send)` |
+| 任务数 > 10 | 告警，建议归档 | `message(action=send)` |
+| 无异常 | HEARTBEAT_OK | — |
 
 ### Step 4 — Session 探活（每 6 次心跳执行一次）
 
@@ -65,14 +103,39 @@ sessions_list(activeMinutes=120)
 
 ## 告警消息格式
 
+### 用户决策提醒
+```
+⚠️ 任务需要决策
+
+T-20260517-003: 实现用户认证
+原因: 等待确认数据库选型（MySQL vs PostgreSQL）
+停滞时间: 2小时
+owner: devengineer
+
+请回复决策，agent 会自动继续。
+```
+
+### Agent 推送（停滞任务）
+```
+[task-manager] 任务 T-20260517-003 停滞 45min。上次你问了用户问题但没继续。请推进，或告知是否需要用户决策。
+```
+
+### Agent 推送（用户已回复）
+```
+[task-manager] 任务 T-20260517-003，用户已回复，请继续推进。
+```
+
+### Agent 推送（裸跑提醒）
+```
+[task-manager] 检测到疑似多步任务未落盘。请创建任务跟踪（不要中断当前工作，创建即可）。
+```
+
+### 僵尸/异常告警
 ```
 ⚠️ 任务监督告警
 
 僵尸任务（>3天未更新）:
 - T-20260516-001: 实现XXX | 最后更新: 2天前 | owner: devengineer
-
-需要用户决策:
-- T-20260516-002: 等待确认数据库选型
 
 父子任务异常:
 - T-20260516-010: 被子任务 T-20260516-011 阻塞 | 原因: 登录接口500

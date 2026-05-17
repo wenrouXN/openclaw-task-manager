@@ -25,6 +25,7 @@ description: >
 3. **验证前不许 complete**：`verify pass` 是 complete 的前置条件（`--force` 除外）。
 4. **失败要记录**：`fail` 时必须写 reason，不能静默放弃。
 5. **跨 session 要恢复**：新 session 接手 → 先 `resume`，不要凭记忆做事。
+6. **创建任务不中断工作**：被提醒落盘时，只创建任务，不要中断当前执行流。创建完继续做事。
 
 违反以上规则 = bug，可在自迭代协议中修补。
 
