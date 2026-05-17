@@ -9,7 +9,7 @@ description: >
 
 # Task Manager — 全局任务生命周期管理
 
-> 任务目录：`/vol1/1000/config/share/openclaw/state/task/`
+> 任务目录：`$TASK_ROOT`（配置环境变量，或在脚本中硬编码）
 > 脚本：本 skill 的 `scripts/task.sh`
 > 详细文档：`references/` 目录
 
@@ -47,7 +47,7 @@ description: >
 ## 快速开始
 
 ```bash
-SCRIPT=/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh
+SCRIPT=/path/to/skills/task-manager/scripts/task.sh  # 按实际路径替换
 
 # 创建任务
 sessions_spawn(

@@ -1,5 +1,25 @@
 # CHANGELOG — Task Manager
 
+## v2.1.3 — 2026-05-17
+
+### 修复
+- **list-done 退出码 1**：`set -e` 下 `[ "$format" = "table" ] && echo ""` 测试失败时导致脚本退出，改用 `if/fi`
+- **duplicate 检测范围**：从仅 `running` 扩展到 `running|blocked`
+
+### 新增
+- **create 加全局锁**：`with_global_lock` 防并发 ID 冲突
+- **duplicate 创建检测**：create 前检查同名 running/blocked 任务
+- **smoke test 脚本**：`scripts/smoke-test.sh`（27 项端到端测试）
+- **GitHub Actions CI**：push/PR 自动跑 smoke test
+- **README badges**：CI status + MIT License
+
+### 变更
+- **setup.md 硬编码路径改占位符**（8 处）
+- **spec-format.md 硬编码路径改占位符**（1 处）
+- **SKILL.md 快速开始改占位符**（2 处）
+- **SPEC-TEMPLATE**：补充 parent/children/verified 字段
+- **清理生产数据残留**：`.locks/T-xxx.lock`
+
 ## v2.1.2 — 2026-05-17
 
 ### 修复

@@ -18,14 +18,27 @@ skills/task-manager/
     └── CHANGELOG.md      # 版本日志
 ```
 
+## 路径变量（按实际部署替换）
+
+```bash
+# 任务目录（存放 active/done/failed 子目录）
+TASK_ROOT=/path/to/task
+
+# task.sh 脚本路径
+SCRIPT_PATH=/path/to/skills/task-manager/scripts/task.sh
+
+# Supervisor workspace 目录
+SUPERVISOR_WORKSPACE=/path/to/workspace-supervisor
+```
+
 ## 初始化（首次使用）
 
 ```bash
 # 创建任务目录结构
-mkdir -p /vol1/1000/config/share/openclaw/state/task/{active,done,failed}
+mkdir -p "$TASK_ROOT"/{active,done,failed}
 
 # 验证脚本可用
-bash /vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh help
+bash "$SCRIPT_PATH" help
 ```
 
 ## Supervisor 配置
@@ -35,16 +48,22 @@ Supervisor 需要两份文件：`AGENTS.md`（协议解析）和 `HEARTBEAT.md`�
 ### Supervisor AGENTS.md 模板
 
 **模板文件**：`templates/AGENTS-TEMPLATE.md`
-**实际配置参考**：`/vol1/1000/config/share/openclaw/state/workspace-supervisor/AGENTS.md`
 
-使用方法：复制模板文件到 supervisor workspace 目录，改名为 `AGENTS.md`，按实际路径调整。
+使用方法：
+```bash
+cp templates/AGENTS-TEMPLATE.md "$SUPERVISOR_WORKSPACE/AGENTS.md"
+# 编辑文件顶部的变量声明，替换为实际路径
+```
 
 ### Supervisor HEARTBEAT.md 模板
 
 **模板文件**：`templates/HEARTBEAT-TEMPLATE.md`
-**实际配置参考**：`/vol1/1000/config/share/openclaw/state/workspace-supervisor/HEARTBEAT.md`
 
-使用方法：复制模板文件到 supervisor workspace 目录，改名为 `HEARTBEAT.md`，按实际路径调整。
+使用方法：
+```bash
+cp templates/HEARTBEAT-TEMPLATE.md "$SUPERVISOR_WORKSPACE/HEARTBEAT.md"
+# 编辑文件顶部的变量声明，替换为实际路径
+```
 
 ## Cron 配置
 
@@ -82,34 +101,32 @@ openclaw cron list-runs --cron-id <cronId> --limit 5
 部署完成后，执行以下检查确认体系正常：
 
 ```bash
-SCRIPT=/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh
-
 # 1. 脚本可用
-bash $SCRIPT help
+bash "$SCRIPT_PATH" help
 
 # 2. 目录结构正确
-ls /vol1/1000/config/share/openclaw/state/task/{active,done,failed}
+ls "$TASK_ROOT"/{active,done,failed}
 
 # 3. 创建+完成全流程
-bash $SCRIPT create "安装验证测试" --agent test
-T=$(bash $SCRIPT list --format json | grep -o '"taskId":"[^"]*"' | tail -1 | cut -d'"' -f4)
-bash $SCRIPT verify "$T" --result pass
-bash $SCRIPT complete "$T"
+bash "$SCRIPT_PATH" create "安装验证测试" --agent test
+T=$(bash "$SCRIPT_PATH" list --format json | grep -o '"taskId":"[^"]*"' | tail -1 | cut -d'"' -f4)
+bash "$SCRIPT_PATH" verify "$T" --result pass
+bash "$SCRIPT_PATH" complete "$T"
 
 # 4. 父子任务
-P=$(bash $SCRIPT create "父任务验证" --agent test | grep -o '"taskId":"[^"]*"' | cut -d'"' -f4)
-bash $SCRIPT create "子任务验证" --agent test --parent "$P"
-bash $SCRIPT tree
-bash $SCRIPT fail "$P" "cleanup"
+P=$(bash "$SCRIPT_PATH" create "父任务验证" --agent test | grep -o '"taskId":"[^"]*"' | cut -d'"' -f4)
+bash "$SCRIPT_PATH" create "子任务验证" --agent test --parent "$P"
+bash "$SCRIPT_PATH" tree
+bash "$SCRIPT_PATH" fail "$P" "cleanup"
 
 # 5. Supervisor 心跳 cron
 openclaw cron list | grep supervisor
 
 # 6. Supervisor AGENTS.md 协议前缀
-grep "task-manager" /vol1/1000/config/share/openclaw/state/workspace-supervisor/AGENTS.md
+grep "task-manager" "$SUPERVISOR_WORKSPACE/AGENTS.md"
 
 # 7. Supervisor HEARTBEAT.md tree 命令
-grep "tree" /vol1/1000/config/share/openclaw/state/workspace-supervisor/HEARTBEAT.md
+grep "tree" "$SUPERVISOR_WORKSPACE/HEARTBEAT.md"
 
 echo "✅ 安装验证通过"
 ```

@@ -30,7 +30,7 @@
 - [ ] Step 3: 待做
 
 ## 上下文
-- **sourceRepo**: /vol1/1000/config/share/projects/xxx
+- **sourceRepo**: /path/to/projects/xxx
 - **branch**: feat/xxx
 - **worktree**: /tmp/acp-cache/xxx
 - **relatedSessions**: agent:devengineer:telegram:group:xxx

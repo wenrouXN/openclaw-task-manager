@@ -113,6 +113,25 @@ cmd_create() {
     [ -z "$agent_id" ] && agent_id="unknown"
     case "$priority" in low|normal|high) ;; *) echo '{"error":"--priority must be low, normal, or high"}'; return 1;; esac
 
+    # Duplicate detection: check if a task with same desc is already running
+    for d in "$ACTIVE_DIR"/T-*; do
+        [ -d "$d" ] || continue
+        local existing_desc existing_status
+        existing_desc=$(spec_field "$d/SPEC.md" "desc" 2>/dev/null || spec_field "$d/SPEC.md" "目标" 2>/dev/null || echo "")
+        existing_status=$(spec_field "$d/SPEC.md" "status")
+        # Match on first line of desc (spec stores desc in 目标 section)
+        local existing_task_id
+        existing_task_id=$(basename "$d")
+        if [ "$existing_status" = "running" ] || [ "$existing_status" = "blocked" ]; then
+            local spec_goal
+            spec_goal=$(sed -n '/^## 目标/,/^##/{/^## 目标/d;/^##/d;p}' "$d/SPEC.md" 2>/dev/null | head -1 | xargs)
+            if [ "$spec_goal" = "$desc" ]; then
+                echo "{\"error\":\"duplicate task\",\"existingTaskId\":\"$existing_task_id\",\"desc\":\"$desc\"}"
+                return 1
+            fi
+        fi
+    done
+
     local task_id task_dir now
     task_id=$(next_task_id)
     task_dir="$ACTIVE_DIR/$task_id"
@@ -674,7 +693,7 @@ cmd_list_done() {
             echo "{\"taskId\":\"$task_id\",\"owner\":\"$agent_id\",\"updated\":\"$updated\",\"desc\":\"$desc\"}"
         fi
     done
-    [ "$format" = "table" ] && echo ""
+    if [ "$format" = "table" ]; then echo ""; fi
 }
 
 cmd_resume_info() {
@@ -882,7 +901,7 @@ cmd_tree() {
 
 # --- Dispatch ---
 case "${1:-help}" in
-    create)   shift; cmd_create "$@" ;;
+    create)   shift; with_global_lock cmd_create "$@" ;;
     update)   shift; with_lock "${1:-_}" cmd_update "$@" ;;
     plan)     shift; with_lock "${1:-_}" cmd_plan "$@" ;;
     complete) shift; with_lock "${1:-_}" cmd_complete "$@" ;;
