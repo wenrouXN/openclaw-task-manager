@@ -1,0 +1,51 @@
+# CHANGELOG — Task Manager
+
+## v2.1.0 — 2026-05-17
+
+### 新增
+- **父子任务**：`--parent` 参数创建子任务，自动注册到父任务的 `children` 字段
+- **`tree` 命令**：树形展示父子任务层级，支持 `--agent` 过滤
+- **`verify` 命令**：验证任务结果（pass/fail），fail 时自动追加修复步骤
+- **`reopen` 命令**：将已完成任务从 done/ 移回 active/，状态重置为 running
+- **`revise` 命令**：验证失败后追加修复步骤（标记为 `[修订]`）
+- **完整守卫**：`complete` 前检查所有子任务必须 done（`--force` 跳过）
+- **联动阻塞**：子任务 `fail` → 父任务自动 `blocked`
+- **预检门控**：触发条件表 + 自检检查点 + 事后补录规范
+- **反模式表**：4 个已验证失败模式（含真实案例）
+- **自迭代协议**：触发条件、迭代流程、改动范围约束
+- **references/**：setup.md（安装部署）、spec-format.md（SPEC 格式）、anti-patterns.md（反模式详解）
+- **templates/**：SPEC-TEMPLATE.md、AGENTS-TEMPLATE.md、HEARTBEAT-TEMPLATE.md
+- **CHANGELOG.md**：版本日志
+- **README.md**：人类可读概览
+
+### 变更
+- Supervisor AGENTS.md 模板：新增 verify/reopen/revise/tree/parent/orphans
+- Supervisor HEARTBEAT.md 模板：新增 tree 命令 + 父子 blocked 告警
+- 安装章节：拆分为 references/setup.md，含 cron 配置 + 安装验证清单 + 迁移指引
+- SPEC.md 格式：拆分为 references/spec-format.md，含状态流转图 + 父子差异 + 恢复机制
+
+## v2.0.0 — 2026-05-17
+
+### 新增
+- **flock 并发锁**：所有写操作加文件锁，防止并发损坏
+- **claim 冲突检测**：`claim` 命令检查当前 owner，返回 conflict
+- **takeover 强制接管**：`takeover` 命令强制接管任务，记录审计日志
+- **orphans 僵尸扫描**：`orphans` 命令扫描超时未更新的任务
+- **plan 步骤规划**：`plan` 命令设置详细执行计划
+- **resume 恢复信息**：`resume` 命令获取断点续做信息
+- **list-done 已完成查询**：`list-done` 命令查询已完成任务
+- **JSON 输出**：`--format json` 支持程序解析
+- **表格式输出**：`--format table` 支持人类阅读
+- **重建索引**：`rebuild-index` 命令重建任务索引
+
+### 变更
+- 任务目录：从 `task-management/` 迁移到 `task-manager/`
+- 脚本：统一到 `scripts/task.sh`
+
+## v1.0.0 — 2026-05-16
+
+### 初始版本
+- 基础 CRUD：create / update / complete / fail / block / unblock / list / status / cleanup
+- Supervisor 协议：`[task-lifecycle]` 前缀解析
+- 心跳巡检：每小时 cron 触发
+- SPEC.md 格式：元信息 + 目标 + 执行计划 + 上下文 + 恢复信息
