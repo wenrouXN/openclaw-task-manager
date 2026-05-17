@@ -1,7 +1,12 @@
 # HEARTBEAT.md — Supervisor 心跳协议（模板）
 
-> **使用方法**：复制到 supervisor workspace 目录，按实际路径调整。
-> 参考实现：`/vol1/1000/config/share/openclaw/state/workspace-supervisor/HEARTBEAT.md`
+> **使用方法**：复制到 supervisor workspace 目录，按实际路径调整下方变量。
+
+<!-- 按实际部署路径替换以下变量 -->
+<!-- 
+SCRIPT_PATH=/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh
+SKILL_PATH=/vol1/1000/config/share/openclaw/state/skills/task-manager/SKILL.md
+-->
 
 **触发方式**：每小时 cron 触发（systemEvent），注入到 supervisor main session。
 
@@ -10,7 +15,7 @@
 ### Step 1 — 任务健康检查（<5s）
 
 ```bash
-SCRIPT=/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh
+SCRIPT="$SCRIPT_PATH"
 
 # 查活跃任务
 bash $SCRIPT list
@@ -63,6 +68,6 @@ sessions_list(activeMinutes=120)
 
 ## Paths
 
-- 任务目录：`/vol1/1000/config/share/openclaw/state/task/`
-- 脚本：`/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh`
-- Skill：`/vol1/1000/config/share/openclaw/state/skills/task-manager/SKILL.md`
+- 任务目录：`$TASK_ROOT`（含 `active/`、`done/`、`failed/` 子目录）
+- 脚本：`$SCRIPT_PATH`
+- Skill：`$SKILL_PATH`

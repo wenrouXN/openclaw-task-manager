@@ -8,6 +8,9 @@
 - **created**: {ISO-8601}
 - **updated**: {ISO-8601}
 - **blockedReason**: （仅 blocked 时填写）
+- **verified**: pass | fail | （未验证留空）
+- **parent**: （父任务 ID，根任务无此字段）
+- **children**: （子任务 ID 列表，逗号分隔，无子任务留空）
 
 ## 目标
 一句话描述要完成什么。

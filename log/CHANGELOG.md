@@ -1,5 +1,16 @@
 # CHANGELOG — Task Manager
 
+## v2.1.2 — 2026-05-17
+
+### 修复
+- **reopen/takeover 清理锁文件**：与 complete/fail 保持一致
+- **输入验证**：create --priority、update --status、verify --result 增加枚举校验
+- **SPEC-TEMPLATE**：补充 parent/children/verified 字段
+
+### 变更
+- **模板路径占位符**：AGENTS-TEMPLATE / HEARTBEAT-TEMPLATE 改用顶部变量声明，去除硬编码路径
+- **.gitignore**：新增
+
 ## v2.1.1 — 2026-05-17
 
 ### 修复

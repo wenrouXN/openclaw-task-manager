@@ -111,6 +111,7 @@ cmd_create() {
     done
     [ -z "$desc" ] && { echo '{"error":"description required"}'; return 1; }
     [ -z "$agent_id" ] && agent_id="unknown"
+    case "$priority" in low|normal|high) ;; *) echo '{"error":"--priority must be low, normal, or high"}'; return 1;; esac
 
     local task_id task_dir now
     task_id=$(next_task_id)
@@ -202,7 +203,10 @@ cmd_update() {
     local now
     now=$(now_iso)
 
-    [ -n "$new_status" ] && sed -i "s/\*\*status\*\*: .*/\*\*status\*\*: $new_status/" "$spec"
+    if [ -n "$new_status" ]; then
+        case "$new_status" in running|blocked|done|failed) ;; *) echo '{"error":"--status must be running, blocked, done, or failed"}'; return 1;; esac
+        sed -i "s/\*\*status\*\*: .*/\*\*status\*\*: $new_status/" "$spec"
+    fi
     [ -n "$step_desc" ] && echo "- $now — $step_desc" >> "$task_dir/log.md"
     [ -n "$last_step" ] && sed -i "s|\*\*lastStep\*\*:.*|\*\*lastStep\*\*: $last_step|" "$spec"
     [ -n "$next_action" ] && sed -i "s|\*\*nextAction\*\*:.*|\*\*nextAction\*\*: $next_action|" "$spec"
@@ -362,6 +366,7 @@ cmd_verify() {
     done
     [ -z "$task_id" ] && { echo '{"error":"taskId required"}'; return 1; }
     [ -z "$result" ] && { echo '{"error":"--result pass|fail required"}'; return 1; }
+    case "$result" in pass|fail) ;; *) echo '{"error":"--result must be pass or fail"}'; return 1;; esac
 
     local task_dir
     task_dir=$(find_task_dir "$task_id") || { echo "{\"error\":\"task $task_id not found\"}"; return 1; }
@@ -419,6 +424,7 @@ cmd_reopen() {
     sed -i "s/\*\*verified\*\*: .*/\*\*verified\*\*: /" "$spec" 2>/dev/null || true
     sed -i "s/\*\*updated\*\*: .*/\*\*updated\*\*: $now/" "$spec"
     echo "- $now — 任务重新打开（从 done 回到 running）" >> "$ACTIVE_DIR/$task_id/log.md"
+    rm -f "$LOCK_DIR/$task_id.lock"
     echo "{\"taskId\":\"$task_id\",\"status\":\"running\",\"message\":\"Task reopened.\"}"
 }
 
@@ -549,6 +555,7 @@ cmd_takeover() {
     local claim_args=("$task_id" --agent "$agent_id" --force)
     [ -n "$new_session" ] && claim_args+=(--session "$new_session")
     cmd_claim "${claim_args[@]}"
+    rm -f "$LOCK_DIR/$task_id.lock"
 }
 
 cmd_orphans() {

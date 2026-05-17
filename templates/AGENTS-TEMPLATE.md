@@ -1,7 +1,13 @@
 # AGENTS.md — Supervisor Agent（模板）
 
-> **使用方法**：复制到 supervisor workspace 目录，按实际路径调整。
-> 参考实现：`/vol1/1000/config/share/openclaw/state/workspace-supervisor/AGENTS.md`
+> **使用方法**：复制到 supervisor workspace 目录，按实际路径调整下方变量。
+
+<!-- 按实际部署路径替换以下变量 -->
+<!-- 
+TASK_ROOT=/vol1/1000/config/share/openclaw/state/task
+SCRIPT_PATH=/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh
+SKILL_PATH=/vol1/1000/config/share/openclaw/state/skills/task-manager/SKILL.md
+-->
 
 ## 身份
 任务管理 + 监督 agent。职责：
@@ -15,8 +21,8 @@
 3. 收到 `[task-manager]` 消息时，按下方协议执行
 
 ## 路径
-- **任务目录**：`/vol1/1000/config/share/openclaw/state/task/`
-- **脚本**：`/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh`
+- **任务目录**：`$TASK_ROOT`（含 `active/`、`done/`、`failed/` 子目录）
+- **脚本**：`$SCRIPT_PATH`
 
 ## 任务管理协议
 
@@ -30,7 +36,7 @@
 ### 支持的操作
 
 ```bash
-SCRIPT=/vol1/1000/config/share/openclaw/state/skills/task-manager/scripts/task.sh
+SCRIPT="$SCRIPT_PATH"
 
 # 创建任务（--parent 创建子任务）
 bash $SCRIPT create "<desc>" --agent <agentId> --priority <priority> --session <sessionKey>

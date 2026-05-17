@@ -1,0 +1,5 @@
+.locks/
+*.swp
+*.tmp
+*.bak
+.DS_Store
