@@ -72,11 +72,8 @@ bash scripts/task.sh help
 cp templates/AGENTS-TEMPLATE.md /path/to/supervisor-workspace/AGENTS.md
 cp templates/HEARTBEAT-TEMPLATE.md /path/to/supervisor-workspace/HEARTBEAT.md
 
-# 4. 创建心跳 cron
-openclaw cron create --name "supervisor-heartbeat" \
-  --schedule '{"kind":"every","everyMs":3600000}' \
-  --payload '{"kind":"systemEvent","agentId":"supervisor","text":"[heartbeat] 巡检"}' \
-  --sessionTarget 'last'
+# 4. 配置心跳（在 OpenClaw 配置中为 supervisor 启用 heartbeat）
+#   agents.supervisor.heartbeat.enabled = true, intervalMs = 3600000
 ```
 
 详见 [references/setup.md](references/setup.md)。
