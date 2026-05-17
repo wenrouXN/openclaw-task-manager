@@ -1,5 +1,16 @@
 # CHANGELOG — Task Manager
 
+## v2.1.4 — 2026-05-17
+
+### 修复
+- **强制规则注入**：SKILL.md 顶部新增 `⚠️ 强制规则` 段，skill 被加载即生效，无需每个 agent 改 AGENTS.md
+- **裸跑检测**：HEARTBEAT-TEMPLATE 新增 Step 2，supervisor 心跳可识别“agent 在裸跑多步任务”并主动提醒
+
+### 变更
+- frontmatter description 强化：明确“≥3 步必须先 create 再执行”
+- SKILL.md 新增 5 条强制规则（落盘、更新进度、验证、失败记录、跨 session 恢复）
+- HEARTBEAT-TEMPLATE 拆分为 4 步（原 Step 2/3 变为 Step 3/4）
+
 ## v2.1.3 — 2026-05-17
 
 ### 修复
