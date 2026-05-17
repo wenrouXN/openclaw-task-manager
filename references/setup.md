@@ -131,6 +131,20 @@ grep "tree" "$SUPERVISOR_WORKSPACE/HEARTBEAT.md"
 echo "✅ 安装验证通过"
 ```
 
+## GitHub Actions CI（可选）
+
+将 CI 配置复制到仓库根目录即可启用自动测试：
+
+```bash
+mkdir -p .github/workflows
+cp references/ci/smoke-test.yml .github/workflows/
+git add .github/workflows/smoke-test.yml
+git commit -m "ci: add smoke test workflow"
+git push
+```
+
+**注意**：推送 `.github/workflows/` 需要 GitHub token 具备 `workflow` scope。
+
 ## 迁移指引（从旧版 task-management）
 
 1. **删除旧 skill 目录**：`rm -rf skills/task-management/`

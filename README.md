@@ -1,6 +1,5 @@
 # Task Manager
 
-[![Smoke Test](https://github.com/wenrouXN/openclaw-task-manager/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/wenrouXN/openclaw-task-manager/actions/workflows/smoke-test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 全局任务生命周期管理系统 — OpenClaw 多 agent 协作场景下的任务跟踪、状态管理和断点恢复。
