@@ -12,7 +12,35 @@ SKILL_PATH=/vol1/1000/config/share/openclaw/state/skills/task-manager/SKILL.md
 
 ## 心跳流程
 
-### Step 1 — 任务健康检查（<5s）
+### Step 1 — Agent 健康检查（必须执行，不可跳过）
+
+**这不是任务检查，是 agent 存活检查。** 即使任务表为空，也必须执行。
+
+```bash
+# 1. 获取所有活跃 session（含最近消息）
+sessions_list(activeMinutes=120, includeLastMessage=true, messageLimit=3)
+```
+
+拿到 sessions 后，逐个检查：
+
+| 检查项 | 判断标准 | 动作 |
+|--------|----------|------|
+| **session 超时** | status=timeout 或 error | 记录，报异常 |
+| **context 膨胀** | contextItems > 200 或 estimatedTokens > 200K | 记录，建议 /new |
+| **裸跑** | session 活跃 + 无对应任务 + 最近消息含多步特征 | 提醒 agent 落盘 |
+| **per-chat 超时** | 日志中最近 2h 有 per-chat timeout | 记录，报异常 |
+| **gateway timeout** | sessions_list 调用失败 | 记录，报异常（不能当 OK 处理）|
+
+**输出格式**：
+```
+## 健康检查
+| Agent | Status | Context | Issues |
+|-------|--------|---------|--------|
+| devengineer | done | 257 items, 77K tokens | ⚠️ context 膨胀 |
+| main | running | 68 items, 32K tokens | ✅ |
+```
+
+### Step 2 — 任务健康检查（<5s）
 
 ```bash
 SCRIPT="$SCRIPT_PATH"
@@ -27,11 +55,11 @@ bash $SCRIPT tree
 bash $SCRIPT cleanup --stale-days 3
 ```
 
-### Step 2 — 任务推进与裸跑检测
+### Step 3 — 任务推进与裸跑检测
 
 **职责**：主动推进停滞任务，识别裸跑 session，提醒需要决策的任务。
 
-#### 2.1 数据收集
+#### 3.1 数据收集
 
 ```bash
 # 活跃任务（JSON）
@@ -41,7 +69,7 @@ TASKS=$(bash $SCRIPT list --format json 2>/dev/null)
 sessions_list(activeMinutes=120, includeLastMessage=true)
 ```
 
-#### 2.2 停滞任务推进
+#### 3.2 停滞任务推进
 
 遍历活跃任务，对比任务 owner 与活跃 session：
 
@@ -59,12 +87,7 @@ sessions_list(activeMinutes=120, includeLastMessage=true)
 - 推送消息带 `[task-manager]` 前缀，agent 按 HEARTBEAT.md 协议响应
 - 用户决策提醒走 `message(action=send)` 直接推送到聊天渠道
 
-#### 2.3 裸跑检测
-
-```bash
-# 对比：有活跃 session 的 agent vs 有活跃任务的 agent
-# 差集 = 可能裸跑的 agent
-```
+#### 3.3 裸跑检测
 
 判断逻辑：
 - agent 有活跃 session 但**无活跃任务** → 检查 session 最近消息
@@ -72,15 +95,35 @@ sessions_list(activeMinutes=120, includeLastMessage=true)
 - `sessions_send` 提醒："检测到疑似多步任务未落盘，请创建任务跟踪（不要中断当前工作，创建即可）"
 - 最近消息是简单问答（<2 步）→ 不提醒
 
-#### 2.4 汇总决策
+#### 3.4 Context 膨胀检查（新增）
+
+从 Step 1 的 sessions 数据中提取：
+- `contextItems > 200` → ⚠️ 告警，建议 `/new` 重置
+- `estimatedTokens > 200K` → ⚠️ 告警，建议 `/new` 重置
+- 连续 3 次心跳 context 都在增长 → 🔴 严重告警
+
+告警推送给用户（`message`），不是推给 agent。
+
+#### 3.5 汇总决策
 
 所有异常收集完毕后，按优先级处理：
-1. 需要用户决策的 blocked 任务 → 推送用户
-2. 停滞的 running 任务 → 推送 agent
-3. 裸跑 session → 提醒 agent（不中断）
-4. 无异常 → HEARTBEAT_OK
+1. gateway timeout / session 超时 → 推送用户
+2. context 膨胀 → 推送用户（附建议）
+3. 需要用户决策的 blocked 任务 → 推送用户
+4. 停滞的 running 任务 → 推送 agent
+5. 裸跑 session → 提醒 agent（不中断）
+6. 无异常 → HEARTBEAT_OK
 
-### Step 3 — 异常处理汇总
+**HEARTBEAT_OK 的前提条件**：
+- sessions_list 调用成功（无 gateway timeout）
+- 无 agent session 超时
+- 无 context 膨胀（items < 200, tokens < 200K）
+- 无裸跑多步任务
+- 无 blocked 需要决策的任务
+
+任一条件不满足 → 报具体异常，**禁止报 HEARTBEAT_OK**。
+
+### Step 4 — 异常处理汇总
 
 | 异常类型 | 处理方式 | 推送渠道 |
 |----------|----------|----------|
@@ -91,9 +134,12 @@ sessions_list(activeMinutes=120, includeLastMessage=true)
 | 裸跑多步任务 | 提醒 agent 创建任务（不中断） | `sessions_send` |
 | 僵尸任务（>3天） | 推送到群，附 taskId + 描述 + 最后更新时间 | `message(action=send)` |
 | 任务数 > 10 | 告警，建议归档 | `message(action=send)` |
-| 无异常 | HEARTBEAT_OK | — |
+| sessions_list 失败 | gateway timeout，心跳检查不完整，需要排查 | `message(action=send)` |
+| agent session 超时 | 记录超时 session，可能需要重启 | `message(action=send)` |
+| context 膨胀 | 告警用户，建议 /new 重置 | `message(action=send)` |
+| 无异常 | 按必填输出格式输出巡检报告，结论标 HEARTBEAT_OK | — |
 
-### Step 4 — Session 探活（每 6 次心跳执行一次）
+### Step 5 — Session 探活（每 6 次心跳执行一次）
 
 ```bash
 sessions_list(activeMinutes=120)
@@ -141,11 +187,43 @@ owner: devengineer
 - T-20260516-010: 被子任务 T-20260516-011 阻塞 | 原因: 登录接口500
 ```
 
+## 必填输出格式（每次心跳必须输出）
+
+**禁止只输出 `HEARTBEAT_OK` 或 `NO_REPLY`。** 每次心跳必须按以下格式输出完整巡检报告，即使无异常：
+
+```
+## 巡检报告 (HH:MM)
+
+### 任务状态
+| 任务 | Owner | 状态 | 上次更新 | 备注 |
+|------|-------|------|----------|------|
+| T-xxx | agent | running/blocked/done | 时间 | 描述 |
+
+（无活跃任务时：`无活跃任务`）
+
+### Agent 状态
+| Agent | Status | Context | 备注 |
+|-------|--------|---------|------|
+| devengineer | done/running | 32K tokens | ✅ 或具体问题 |
+
+### 督办事项
+- (停滞任务、需要决策、裸跑提醒、context 膨胀、僵尸任务等)
+- 无 → `无督办事项`
+
+### 结论
+HEARTBEAT_OK / ⚠️ 需关注 / 🔴 异常
+```
+
+**规则：**
+- 督办事项为空时也要写 `无督办事项`，不能省略
+- 结论只有在所有检查项都通过时才能标 HEARTBEAT_OK
+- 结论标 ⚠️ 或 🔴 时，督办事项必须列出具体问题
+
 ## Night Mode (23:00-08:00)
 
-- 只执行 Step 1（健康检查）
-- 不推送告警
-- HEARTBEAT_OK
+- 执行 Step 1（agent 健康检查）+ Step 2（任务检查）
+- 不推送告警（静默记录）
+- 但如果有严重异常（context > 300K / session 超时 > 3 次），仍然推送
 
 ## Paths
 

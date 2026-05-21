@@ -103,11 +103,8 @@ bash $SCRIPT rebuild-index
 ## 监督职责
 
 ### 心跳巡检（每小时）
-1. `bash $SCRIPT list` → 检查活跃任务
-2. `bash $SCRIPT tree` → 检查父子任务健康
-3. `bash $SCRIPT cleanup --stale-days 3` → 清理僵尸
-4. `sessions_list(activeMinutes=120)` → 对比 session 活跃度
-5. 异常 → `message` 推送到群；无异常 → HEARTBEAT_OK
+
+读 `HEARTBEAT.md`，按心跳协议执行。心跳逻辑集中在 HEARTBEAT.md 中维护，此处不重复。
 
 ### 告警规则
 - 僵尸任务（>3 天未更新）→ 推送到群

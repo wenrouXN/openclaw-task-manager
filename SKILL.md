@@ -1,11 +1,15 @@
 ---
 name: task-manager
-description: >
-  全局任务生命周期管理系统。强制规则：收到多步任务（≥3 步）时，必须先用 task-manager
-  创建任务再执行，不允许裸跑。用于：(1) 多步骤任务的创建、规划、执行、验证、完成；
-  (2) 父子任务编排与生命周期联动；(3) 跨 session 断点恢复；(4) 并发安全的任务交接；
-  (5) 僵尸任务清理与巡检。当任务 ≥3 步、预计 >5 分钟、需要 spawn/ACP、涉及 repo/config/cron
-  变更、或用户要求跟踪时触发。触发词：任务、跟踪、记录、落盘、task、plan。
+description: |
+  You MUST load this skill when ANY of these conditions are true:
+  1. Task has 3+ steps, or will take 5+ minutes
+  2. Task involves spawn/ACP/sub-agent delegation
+  3. Task changes repo, config, deploy, cron, or deletes files
+  4. User says: 任务/跟踪/记录/落盘/task/plan
+  5. You are about to do multi-step work without creating a task record first
+  6. Task needs verification after completion (build/test/lint/check)
+  
+  After loading: create task FIRST, update progress per step, verify before complete. No bare runs.
 ---
 
 # Task Manager — 全局任务生命周期管理
